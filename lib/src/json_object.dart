@@ -83,6 +83,13 @@ extension type const JsonObject._(Map<String, Object?> _fields)
   JsonObject withFields(Map<String, Object?> more) =>
       JsonObject._({..._fields, ...more});
 
+  /// A copy that refuses changes, for an object kept for the life of a
+  /// conversation. Nothing outside this library writes to a [JsonObject],
+  /// but whoever made this one with [JsonObject.of] still holds that map;
+  /// the copy no longer shares it. Nested objects and lists are shared, not
+  /// copied, as [JsonObject.unmodifiable] shares them.
+  JsonObject frozen() => JsonObject._(Map.unmodifiable(_fields));
+
   /// This object without the fields named in [keys]. A name that is absent
   /// is passed over.
   JsonObject without(Iterable<String> keys) {

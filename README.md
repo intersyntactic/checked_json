@@ -50,6 +50,7 @@ final streaming = body.withFields({'stream': true});   // fields laid over
 final request = JsonObject.merge([common, if (effort != null) effort]);
                                                         // later parts win
 final plain = streaming.without({'stream'});            // fields dropped
+final kept = plain.frozen();                            // read-only copy
 ```
 
 For an object used as a dictionary, whose keys are data rather than names the
