@@ -3,18 +3,23 @@
 ## 0.2.0
 
 - **Breaking:** `JsonObject` no longer implements `Map<String, Object?>`, so
-  a field is read through a reader, `raw`, or `fields`. To migrate:
+  `obj['k']` and `obj['k'] = v` do not compile. To migrate:
 
   | 0.1.x | 0.2.0 |
   |---|---|
-  | `obj['k']` | `obj.raw('k')`, or a typed reader |
-  | `{...obj, 'k': v}` | `{...obj.fields, 'k': v}` |
-  | `obj.entries` / `keys` / `values` | `obj.fields.entries` / `keys` / `values` |
+  | `obj['k']` | a typed reader (`obj.string('k')`, ...), or `obj.raw('k')` for a value read with a pattern or passed on |
+  | `JsonObject.of({...obj, 'k': v})` | `obj.withFields({'k': v})` |
+  | `JsonObject.of({...a, ...b})` | `JsonObject.merge([a, b])` |
+  | `JsonObject.of({...obj}..remove('k'))` | `obj.without({'k'})` |
+  | `obj.keys`, `obj.entries` | `obj.keys`, with a reader for each value |
   | `obj.containsKey(k)` | `obj.has(k)` |
-  | `obj` passed where a `Map` is wanted | `obj.fields` |
-  | `obj['k'] = v` | build a new object: `JsonObject.of({...obj.fields, 'k': v})` |
+  | `obj` passed to a parameter declared as a `Map` | `obj.asUncheckedMap()` |
+  | `jsonEncode(obj)` | unchanged: it writes a `JsonObject` as it is |
 
-- Add `fields`: every field, as a map that refuses changes.
+- Add `withFields`, `JsonObject.merge` and `without`, which each make a new
+  object from others, and `keys`.
+- Add `asUncheckedMap()`, a read-only map view for a parameter declared as a
+  `Map`.
 - `JsonObject` implements `Object`, so it is never null and an extension on
   `T extends Object` applies to it. (Without `implements Map`, it would
   otherwise be only an `Object?`.)

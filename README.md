@@ -40,16 +40,29 @@ type. A default for an absent field is the caller's `??`, so the default sits
 where it is used. `has(k)` tells a field present with a null value apart from
 an absent one, and `raw(k)` gives a field as it was decoded.
 
-`fields` gives every field as a map that refuses changes. Use it for an
-object used as a dictionary, whose keys are data rather than names the code
-knows, and for building one object from another:
+## Building one object from others
+
+Each of these gives a new `JsonObject`, so no map has to come out to be
+spread:
 
 ```dart
-final body = JsonObject.of({...base.fields, 'stream': true});
-for (final MapEntry(:key, :value) in prices.fields.entries) { /* ... */ }
+final streaming = body.withFields({'stream': true});   // fields laid over
+final request = JsonObject.merge([common, if (effort != null) effort]);
+                                                        // later parts win
+final plain = streaming.without({'stream'});            // fields dropped
 ```
 
-A read from `fields` is unchecked, as `raw` is.
+For an object used as a dictionary, whose keys are data rather than names the
+code knows, `keys` gives the names and a reader reads each value:
+
+```dart
+final prices = {for (final m in table.keys) m: table.number(m)};
+```
+
+`jsonEncode` writes a `JsonObject` as it is, so encoding needs no map. The one
+way out to a `Map` is `asUncheckedMap()`, a read-only view for a parameter
+declared as a `Map`, as some other package's API is. A read from it is
+unchecked, which is what the name says.
 
 `JsonFieldException` extends `FormatException`: a bad field is a condition
 you're meant to catch, not a programming bug. Code that already catches
@@ -63,8 +76,8 @@ you're meant to catch, not a programming bug. Code that already catches
   `FormatException`. Use `JsonObject.parse` instead, and the same goes for a
   `JsonObject` pattern.
 - **A `JsonObject` is not a `Map`.** `obj['k']` does not compile, and
-  neither does `obj['k'] = v`, so a field is read through a reader, `raw` or
-  `fields`, and nothing outside the library writes to one. (Up to 0.1.x it
+  neither does `obj['k'] = v`, so a field is read through a reader or `raw`,
+  and nothing outside the library writes to one. (Up to 0.1.x it
   implemented `Map<String, Object?>`.) It does implement `Object`, so it is
   never null and an extension on `T extends Object` applies to it.
 - **`parse` matches the map's runtime type.** `jsonDecode` always makes a

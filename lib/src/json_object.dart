@@ -17,10 +17,12 @@ import 'dart:convert';
 /// one of the wrong type. A default for an absent field is the caller's `??`,
 /// so the default sits where it is used.
 ///
-/// It is not a map: a field is read through a reader, [raw], or the
-/// read-only [fields], and `obj['k']` does not compile. It does implement
-/// [Object], so it is never null and an extension on `T extends Object`
-/// applies to it.
+/// It is not a map: a field is read through a reader or [raw], and
+/// `obj['k']` does not compile. One object is made from others with
+/// [withFields], [JsonObject.merge] and [without], each giving a new
+/// [JsonObject], so a map never has to come out to be spread. It does
+/// implement [Object], so it is never null and an extension on
+/// `T extends Object` applies to it.
 ///
 /// The type is erased at runtime: `x as JsonObject` is
 /// `x as Map<String, Object?>`, and fails with a [TypeError] where a door
@@ -40,6 +42,11 @@ extension type const JsonObject._(Map<String, Object?> _fields)
 
   /// The object with no fields.
   static const empty = JsonObject._({});
+
+  /// One object with the fields of each of [parts], in order: a later part's
+  /// field takes the place of an earlier one's.
+  factory JsonObject.merge(Iterable<JsonObject> parts) =>
+      JsonObject._({for (final p in parts) ...p._fields});
 
   /// [text] decoded as a JSON object. A [FormatException] when it is not
   /// JSON, or is JSON of another kind (a list, a string, a number, null).
@@ -67,11 +74,30 @@ extension type const JsonObject._(Map<String, Object?> _fields)
   /// with a pattern (one of several kinds) or passes on untouched.
   Object? raw(String k) => _fields[k];
 
-  /// Every field, as a map that refuses changes. For an object used as a
-  /// dictionary, whose keys are data rather than names the code knows, and
-  /// for building one object from another: `JsonObject.of({...base.fields,
-  /// 'stream': true})`. A read from it is unchecked, as [raw] is.
-  Map<String, Object?> get fields => UnmodifiableMapView(_fields);
+  /// The field names, for an object used as a dictionary, whose keys are
+  /// data rather than names the code knows. Read each value with a reader.
+  Iterable<String> get keys => _fields.keys;
+
+  /// This object with [more] laid over it: a new field is added after the
+  /// existing ones, and one already present takes the new value in place.
+  JsonObject withFields(Map<String, Object?> more) =>
+      JsonObject._({..._fields, ...more});
+
+  /// This object without the fields named in [keys]. A name that is absent
+  /// is passed over.
+  JsonObject without(Iterable<String> keys) {
+    final drop = keys.toSet();
+    return JsonObject._({
+      for (final MapEntry(:key, :value) in _fields.entries)
+        if (!drop.contains(key)) key: value,
+    });
+  }
+
+  /// The object as a map that refuses changes, for a parameter declared as
+  /// a [Map], as some other package's API is. Nothing else needs one:
+  /// `jsonEncode` writes a [JsonObject] as it is. A read from it is
+  /// unchecked, which is what the name says.
+  Map<String, Object?> asUncheckedMap() => UnmodifiableMapView(_fields);
 
   String string(String k) => switch (_fields[k]) {
         final String s => s,
