@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 
 /// A JSON object: string keys, JSON values, read through the readers below.
@@ -16,16 +17,17 @@ import 'dart:convert';
 /// one of the wrong type. A default for an absent field is the caller's `??`,
 /// so the default sits where it is used.
 ///
-/// For now it also implements `Map<String, Object?>`, so a field can still be
-/// read by key and a [JsonObject] goes wherever a map is wanted. A later
-/// version drops that, leaving the readers as the only way to a field.
+/// It is not a map: a field is read through a reader, [raw], or the
+/// read-only [fields], and `obj['k']` does not compile. It does implement
+/// [Object], so it is never null and an extension on `T extends Object`
+/// applies to it.
 ///
 /// The type is erased at runtime: `x as JsonObject` is
 /// `x as Map<String, Object?>`, and fails with a [TypeError] where a door
 /// would have thrown a [FormatException]. Use [parse] instead, and the same
 /// goes for `is JsonObject` and a `JsonObject` pattern.
 extension type const JsonObject._(Map<String, Object?> _fields)
-    implements Map<String, Object?> {
+    implements Object {
   /// An object built from a map we wrote, as a `toJson` returns it. A map
   /// literal is one; so is any map whose type already says string keys.
   const JsonObject.of(Map<String, Object?> fields) : this._(fields);
@@ -64,6 +66,12 @@ extension type const JsonObject._(Map<String, Object?> _fields)
   /// The field as it was decoded, for a value whose shape the caller reads
   /// with a pattern (one of several kinds) or passes on untouched.
   Object? raw(String k) => _fields[k];
+
+  /// Every field, as a map that refuses changes. For an object used as a
+  /// dictionary, whose keys are data rather than names the code knows, and
+  /// for building one object from another: `JsonObject.of({...base.fields,
+  /// 'stream': true})`. A read from it is unchecked, as [raw] is.
+  Map<String, Object?> get fields => UnmodifiableMapView(_fields);
 
   String string(String k) => switch (_fields[k]) {
         final String s => s,

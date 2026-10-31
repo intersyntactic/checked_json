@@ -40,6 +40,17 @@ type. A default for an absent field is the caller's `??`, so the default sits
 where it is used. `has(k)` tells a field present with a null value apart from
 an absent one, and `raw(k)` gives a field as it was decoded.
 
+`fields` gives every field as a map that refuses changes. Use it for an
+object used as a dictionary, whose keys are data rather than names the code
+knows, and for building one object from another:
+
+```dart
+final body = JsonObject.of({...base.fields, 'stream': true});
+for (final MapEntry(:key, :value) in prices.fields.entries) { /* ... */ }
+```
+
+A read from `fields` is unchecked, as `raw` is.
+
 `JsonFieldException` extends `FormatException`: a bad field is a condition
 you're meant to catch, not a programming bug. Code that already catches
 `FormatException` still catches it.
@@ -51,10 +62,11 @@ you're meant to catch, not a programming bug. Code that already catches
   fails with a `TypeError` where a door would have thrown a
   `FormatException`. Use `JsonObject.parse` instead, and the same goes for a
   `JsonObject` pattern.
-- **For now a `JsonObject` is also a `Map<String, Object?>`.** It implements
-  the map type, so `obj['k']` still compiles, reads a field without a check,
-  and a `JsonObject` goes wherever a map is wanted. 0.2.0 removes this,
-  leaving the readers as the only way to a field.
+- **A `JsonObject` is not a `Map`.** `obj['k']` does not compile, and
+  neither does `obj['k'] = v`, so a field is read through a reader, `raw` or
+  `fields`, and nothing outside the library writes to one. (Up to 0.1.x it
+  implemented `Map<String, Object?>`.) It does implement `Object`, so it is
+  never null and an extension on `T extends Object` applies to it.
 - **`parse` matches the map's runtime type.** `jsonDecode` always makes a
   string-keyed map, so its output is fine. A `Map<dynamic, dynamic>`, as YAML
   and Flutter platform channels deliver one, gives null even when every key is
