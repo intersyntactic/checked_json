@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.1
+
+- Add `deepFrozen()`: a copy all the way down that refuses changes. Every
+  nested object and list is copied and made unmodifiable, field and list
+  order are kept (so `jsonEncode` writes the same bytes), and a nested map
+  comes back as a `Map<String, Object?>`. A value `jsonEncode` cannot write
+  as it is (a key that is not a string, a `Set`, a `DateTime`, `NaN`) is a
+  `JsonFieldException` whose `field` is its path, such as `a.b[2]`. A key is
+  never turned into a string.
+- `frozen()` and `JsonObject.unmodifiable` are unchanged and stay shallow.
+
 ## 0.2.0
 
 - **Breaking:** `JsonObject` no longer implements `Map<String, Object?>`, so
