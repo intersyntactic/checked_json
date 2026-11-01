@@ -51,6 +51,7 @@ final request = JsonObject.merge([common, if (effort != null) effort]);
                                                         // later parts win
 final plain = streaming.without({'stream'});            // fields dropped
 final kept = plain.frozen();                            // read-only copy
+final schema = tool.deepFrozen();                       // read-only all the way down
 ```
 
 For an object used as a dictionary, whose keys are data rather than names the
@@ -59,6 +60,11 @@ code knows, `keys` gives the names and a reader reads each value:
 ```dart
 final prices = {for (final m in table.keys) m: table.number(m)};
 ```
+
+`frozen()` copies only the object itself, and nested objects and lists stay
+shared. `deepFrozen()` copies and protects every one of them, keeps field and
+list order, and refuses (with the path) any value `jsonEncode` couldn't write,
+including a key that is not a string.
 
 `jsonEncode` writes a `JsonObject` as it is, so encoding needs no map. The one
 way out to a `Map` is `asUncheckedMap()`, a read-only view for a parameter

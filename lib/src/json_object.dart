@@ -87,8 +87,29 @@ extension type const JsonObject._(Map<String, Object?> _fields)
   /// conversation. Nothing outside this library writes to a [JsonObject],
   /// but whoever made this one with [JsonObject.of] still holds that map;
   /// the copy no longer shares it. Nested objects and lists are shared, not
-  /// copied, as [JsonObject.unmodifiable] shares them.
+  /// copied, as [JsonObject.unmodifiable] shares them; [deepFrozen] copies
+  /// them too.
   JsonObject frozen() => JsonObject._(Map.unmodifiable(_fields));
+
+  /// A copy all the way down that refuses changes, for an object kept as it
+  /// was at one moment, such as a tool's schema. Every object and list
+  /// inside is copied as well, so neither a later change to the maps and
+  /// lists this was made of nor a write through the copy can change it.
+  ///
+  /// Field order and list order are kept, so `jsonEncode` writes the same
+  /// bytes before and after. Every value inside must be one `jsonEncode`
+  /// writes as it is: null, a bool, a finite number, a string, a list, or an
+  /// object whose keys are strings. Anything else is a [JsonFieldException]
+  /// whose [JsonFieldException.field] is where it is (`a.b[2]`), raised here
+  /// rather than by a later `jsonEncode`. A key that is not a string is never
+  /// turned into one, since `1` and `'1'` would then collide.
+  ///
+  /// A nested map comes back as a `Map<String, Object?>` whatever its type
+  /// was, so [object] and [objects] read one written as a bare `{}` literal.
+  JsonObject deepFrozen() => JsonObject._(Map.unmodifiable({
+        for (final MapEntry(:key, :value) in _fields.entries)
+          key: _deepFrozen(value, key),
+      }));
 
   /// This object without the fields named in [keys]. A name that is absent
   /// is passed over.
@@ -176,6 +197,26 @@ final class JsonFieldException extends FormatException {
   /// What the field should have been, as a phrase: `a string`, `a list`.
   final String wanted;
 }
+
+/// [value], found at [at], copied all the way down into maps and lists that
+/// refuse changes; see [JsonObject.deepFrozen].
+Object? _deepFrozen(Object? value, String at) => switch (value) {
+      null || bool() || String() => value,
+      final num n when n.isFinite => n,
+      final Map<Object?, Object?> m => Map<String, Object?>.unmodifiable({
+          for (final MapEntry(:key, :value) in m.entries)
+            _stringKey(key, at): _deepFrozen(value, '$at.$key'),
+        }),
+      final List<Object?> l => List<Object?>.unmodifiable([
+          for (final (i, x) in l.indexed) _deepFrozen(x, '$at[$i]'),
+        ]),
+      _ => throw JsonFieldException(at, 'a JSON value'),
+    };
+
+/// [key] of the object at [at], refused unless it is a string.
+String _stringKey(Object? key, String at) => key is String
+    ? key
+    : throw JsonFieldException(at, 'an object with string keys');
 
 /// [v] as a whole number: `3`, or `3.0` as some writers spell one (and as a
 /// web build reads every whole number), but never `3.5`; null for anything

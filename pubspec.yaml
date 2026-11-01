@@ -2,7 +2,7 @@ name: checked_json
 description: >-
   A JSON object type you only get by checking a value, with typed readers that
   name the field that is absent or the wrong shape.
-version: 0.2.0
+version: 0.2.1
 repository: https://github.com/intersyntactic/checked_json
 
 environment:
